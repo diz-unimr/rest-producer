@@ -1,0 +1,80 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.2.3'
+	id 'io.spring.dependency-management' version '1.1.4'
+	id 'jacoco'
+	id "com.diffplug.spotless" version "6.25.0"
+}
+
+group = 'de.unimarburg.diz'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
+
+repositories {
+	mavenCentral()
+	maven { url 'https://repo.spring.io/snapshot' }
+	maven { url 'https://repo.spring.io/milestone' }
+}
+
+dependencies {
+
+	implementation 'org.springframework.boot:spring-boot-starter'
+	implementation 'org.springframework.kafka:spring-kafka'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.json:json:20240303'
+	implementation 'com.jayway.jsonpath:json-path:2.9.0'
+	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.kafka:spring-kafka-test'
+	testImplementation 'org.assertj:assertj-core:3.22.0'
+
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+jacoco {
+	toolVersion = "0.8.11"
+	reportsDirectory = layout.buildDirectory.dir('jacoco-reports')
+}
+
+jacocoTestReport {
+	reports {
+		xml.required = true
+		csv.required = true
+		csv.outputLocation = layout.buildDirectory.file('jacoco/coverage.csv')
+		html.outputLocation = layout.buildDirectory.dir('jacoco/html')
+	}
+}
+
+tasks.named('bootBuildImage') {
+	environment = [
+			"BP_OCI_SOURCE":"https://github.com/diz-unimr/rest-processor",
+			"BP_OCI_LICENSES": "AGPLv3",
+			"BP_OCI_DESCRIPTION": "Kafka producer which aggregates REST endpoint data into kafka topics",
+			"BP_OCI_AUTHORS": "Jakub Lidke",
+			"BP_JVM_VERSION": "21",
+			"BP_OCI_VENDOR":"Datenintegrationszentrum Fachbereich Medizin Philipps Universität Marburg"
+			]
+}
+
+spotless {
+	java {
+		importOrder() // standard import order
+		// You probably want an empty string at the end - all of the
+		// imports you didn't specify explicitly will go there.
+
+		removeUnusedImports()
+
+		licenseHeader '/* GNU AFFERO GENERAL PUBLIC LICENSE  Version 3 (C)$YEAR Datenintegrationszentrum Fachbereich Medizin Philipps Universität Marburg */'
+		formatAnnotations()
+		cleanthat()
+		googleJavaFormat() // has its own section below
+	}
+}

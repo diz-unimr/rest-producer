@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: rest-producer
+  kafka:
+    bootstrap-servers: "localhost:9092"
+    producer:
+      compression-type: gzip
+      retries: 3
+      security:
+        protocol: PLAINTEXT
+      client-id:
+
+app:
+  proxyHost: "http://myDummyProxy.org"
+  proxyPort: 8081
+
+  loader:
+    password: "rest-password"
+    username: "rest-user"
+
+    endpoints[0]:
+      endpoint-name: "jobs"
+      endpoint-address: "https://target/jobs/?filter_string=COMPLETED_OKAY&{$pagination}"
+      id-property: "id"
+      pagination: true
+      page-size-param-name: "page_size"
+      page-size-value: 20
+      page-param-name: "page"
+      page-start-value: 1
+      next-child-endpoint-name: "job"
+      next-node-reference: "jobs[*].job_id"
+    endpoints[1]:
+      endpoint-name: "job"
+      produce-to-kafka: true
+      endpoint-address: "https://target/job/{job_id}"
+      id-property: "id"
+      next-child-endpoint-name: "result-filtered-list"
+      next-node-reference: "samples[*].id"
+    endpoints[2]:
+      endpoint-name: "result-filtered-list"
+      produce-to-kafka: true
+      endpoint-address: "https://target/jobs/{job_id}/samples/{samples-id}/results/cnv-filtered-list"
+      id-property: "id"
+      next-sibling-endpoint: "result-variant-filtered-list"
+    endpoints[3]:
+      endpoint-name: "result-variant-filtered-list"
+      produce-to-kafka: true
+      endpoint-address: "https://target/jobs/{job_id}/samples/{samples-id}/results/variant-filtered-list"
+      id-property: "id"

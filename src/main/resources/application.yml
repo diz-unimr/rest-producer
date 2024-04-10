@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: rest-producer
+
+app:
+  proxyHost: null
+  proxyPort:
+
+server:
+  port:
+    8080
