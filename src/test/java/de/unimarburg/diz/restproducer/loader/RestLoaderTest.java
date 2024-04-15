@@ -7,8 +7,12 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
 import de.unimarburg.diz.restproducer.config.AppConfiguration;
+import de.unimarburg.diz.restproducer.config.EndpointNodeProperties;
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,7 +47,8 @@ class RestLoaderTest {
   }
 
   @Test
-  void load() throws URISyntaxException {
+  void load_withParameter()
+      throws URISyntaxException, MalformedURLException, UnsupportedEncodingException {
     assertThat(restLoader).isNotNull();
 
     final String mockedResponse = "mockedResponse";
@@ -60,5 +65,39 @@ class RestLoaderTest {
             Map.of("job_id", "23", "sample_id", "42"));
     mockServer.verify();
     assertThat(result).isEqualTo(mockedResponse);
+  }
+
+  @Test
+  void load_withOutParameter()
+      throws URISyntaxException, MalformedURLException, UnsupportedEncodingException {
+    assertThat(restLoader).isNotNull();
+
+    final String mockedResponse = "mockedResponse";
+    mockServer
+        .expect(ExpectedCount.once(), requestTo(new URI("http://localhost:9090/jobs")))
+        .andExpect(method(HttpMethod.GET))
+        .andRespond(
+            withStatus(HttpStatus.OK).contentType(MediaType.APPLICATION_JSON).body(mockedResponse));
+
+    var result = restLoader.load("http://localhost:9090/jobs", new HashMap<>());
+    mockServer.verify();
+    assertThat(result).isEqualTo(mockedResponse);
+  }
+
+  private EndpointNodeProperties getEndpointNodeProperties(
+      String nextNodeRefProperty, String endPointAddress, String extractionTarget) {
+    return new EndpointNodeProperties(
+        "testFindParam",
+        endPointAddress,
+        "child",
+        "idProp",
+        nextNodeRefProperty,
+        "http://localhost/nextSibling",
+        null,
+        null,
+        null,
+        null,
+        null,
+        extractionTarget);
   }
 }

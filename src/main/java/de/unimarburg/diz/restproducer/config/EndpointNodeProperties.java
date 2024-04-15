@@ -12,8 +12,6 @@ import org.springframework.lang.Nullable;
  *
  * @param endpointName internal reference name for this endpoint - can be used at {@link
  *     #nextSiblingEndpoint} or {@link #nextChildEndpointName}
- * @param produceToKafka if true result of rest call will be stored into a topic named {@link
- *     #endpointName}
  * @param endpointAddress request target
  * @param nextChildEndpointName internal reference name ({@link #endpointName}) for next child node
  *     (optional)
@@ -27,11 +25,12 @@ import org.springframework.lang.Nullable;
  * @param pageSizeParamName request parameter name for page size - e.g. 'page_size' (optional)
  * @param pageSizeValue number of record per page (optional default value is 20)
  * @param pageStartValue page number to start (optional: default value is 1)
+ * @param extractionTarget result property content is used to produce kafka messages, if value is
+ *     missing endpoint used to traverse in deeper hierarchy level
  */
 @ConfigurationProperties("app.loader.endpoints")
 public record EndpointNodeProperties(
     @NonNull String endpointName,
-    @Nullable Boolean produceToKafka,
     @NonNull String endpointAddress,
     @Nullable String nextChildEndpointName,
     @NonNull String idProperty,
@@ -41,4 +40,5 @@ public record EndpointNodeProperties(
     @Nullable String pageParamName,
     @Nullable String pageSizeParamName,
     @Nullable Integer pageSizeValue,
-    @Nullable Integer pageStartValue) {}
+    @Nullable Integer pageStartValue,
+    @Nullable String extractionTarget) {}

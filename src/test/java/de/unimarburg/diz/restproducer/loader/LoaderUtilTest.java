@@ -11,12 +11,33 @@ import java.util.List;
 import org.json.JSONException;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 class LoaderUtilTest {
+
+  @ParameterizedTest
+  @CsvSource({
+    "jobs[*].job_id,jobs____job_id",
+    "sample.id,sample_id",
+    "$..book[?(@.price <= $['expensive'])],___book_____price_______expensive____"
+  })
+  void convertPathToVariableName(String value, String expected) {
+
+    assertThat(LoaderUtil.convertPathToVariableName(value)).isEqualTo(expected);
+  }
+
+  @Test
+  void getVariableNames() {
+    var result =
+        LoaderUtil.getVariableNames(
+            "https://target/jobs/{jobs____job_id}/samples/{samples____id}/results/cnv-filtered-list");
+    assertThat(result).containsExactly("{jobs____job_id}", "{samples____id}");
+  }
 
   @Nested
   @SpringBootTest
@@ -88,12 +109,12 @@ class LoaderUtilTest {
     private EndpointNodeProperties getEndpointNodeProperties(String nextNodeRefProperty) {
       return new EndpointNodeProperties(
           "testFindParam",
-          null,
           "http://localhost/test",
           "child",
           "idProp",
           nextNodeRefProperty,
           "http://localhost/nextSibling",
+          null,
           null,
           null,
           null,

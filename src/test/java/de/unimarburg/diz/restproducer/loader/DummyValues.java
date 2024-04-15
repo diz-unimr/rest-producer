@@ -26,8 +26,8 @@ public class DummyValues {
         {
         "id":11,
         "samples": [
-            {"id":"111", "status":"OK"},
-            {"id":"112", "status":"ERROR"}
+            {"id":"111", "status":"OK", "name":"sample A"},
+            {"id":"112", "status":"OK", "name":"sample B"}
             ]
         }
         """;
@@ -37,8 +37,8 @@ public class DummyValues {
         {
         "id":12,
         "samples": [
-            {"id":"121", "name":"sample A"},
-            {"id":"122", "name":"sample B"}
+            {"id":"121", "name":"sample C"},
+            {"id":"122", "name":"sample D"}
             ]
         }
       """;

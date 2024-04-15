@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
@@ -159,5 +160,40 @@ public class LoaderUtil {
           });
     }
     return currentNode;
+  }
+
+  /**
+   * URL variables may contain only
+   *
+   * <ul>
+   *   <li>Lowercase alphabetical
+   *   <li>Numerical
+   *   <li>Hyphen
+   *   <li>Underscore
+   * </ul>
+   *
+   * therefore we replace other characters with '_'
+   *
+   * @param path json filter path to a property
+   * @return url compatible variable name
+   * @implNote if we get variable duplicates, this could be implemented more sophisticated, but for
+   *     first version this should be sufficient
+   */
+  public static String convertPathToVariableName(String path) {
+    return path.replaceAll("\\W", "_").toLowerCase();
+  }
+
+  public static List<String> getVariableNames(String endpointAddress) {
+
+    var result = new ArrayList<String>();
+    var pattern = Pattern.compile("\\{[\\w^\\}]{1,50}\\}");
+
+    var matcher = pattern.matcher(endpointAddress);
+    while (matcher.find()) {
+      var parameter = matcher.group();
+      result.add(parameter);
+    }
+
+    return result;
   }
 }
