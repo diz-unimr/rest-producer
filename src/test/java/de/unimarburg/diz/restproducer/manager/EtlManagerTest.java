@@ -17,6 +17,7 @@ import de.unimarburg.diz.restproducer.loader.RestLoader;
 import de.unimarburg.diz.restproducer.sender.KafkaSender;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -129,6 +130,60 @@ class EtlManagerTest {
       verify(kafkaSender, times(6)).send(any(Message.class));
     }
   }
+
+  @SpringBootTest
+  @ActiveProfiles("test")
+  @Disabled("WIP")
+  @ExtendWith(SpringExtension.class)
+  @Nested
+  class EtlManagerThreeLevelTest {
+
+    @Autowired AppConfiguration appConfiguration;
+
+    @Mock RestLoader restloader;
+
+    @Mock KafkaSender kafkaSender;
+
+    EtlManager etlManager;
+
+    @BeforeEach
+    void setUpBeforeClass() throws Exception {
+      MockitoAnnotations.openMocks(this);
+
+      etlManager = new EtlManager(restloader, kafkaSender, appConfiguration);
+
+      when(restloader.load(ArgumentMatchers.startsWith("https://target/jobs/"), anyMap()))
+          .thenReturn(DummyValues.jobsExample1);
+
+      var job1Map = Map.of("jobs____job_id", "11");
+      when(restloader.load(
+          ArgumentMatchers.startsWith("https://target/job"),
+          argThat(new MapContainsAtLeastEntriesMatcher(job1Map))))
+          .thenReturn(DummyValues.jobExample1);
+
+      var job2Map = Map.of("jobs____job_id", "12");
+      when(restloader.load(
+          ArgumentMatchers.startsWith("https://target/job"),
+          argThat(new MapContainsAtLeastEntriesMatcher(job2Map))))
+          .thenReturn(DummyValues.jobExample2);
+
+      var job3Map = Map.of("jobs____job_id", "12");
+      when(restloader.load(
+          ArgumentMatchers.startsWith("https://target/job"),
+          argThat(new MapContainsAtLeastEntriesMatcher(job2Map))))
+          .thenReturn(DummyValues.jobExample2);
+
+      when(kafkaSender.send(any(Message.class))).thenReturn(true);
+    }
+
+    @Test
+    void execute() {
+      assertThat(etlManager).isNotNull();
+      assertThat(etlManager.execute()).as("2 entries at jobs á 2 samples").isEqualTo(6);
+      verify(kafkaSender, times(6)).send(any(Message.class));
+    }
+  }
+
 
   private class MapContainsAtLeastEntriesMatcher implements ArgumentMatcher<Map<String, String>> {
 

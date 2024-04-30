@@ -10,15 +10,18 @@ import de.unimarburg.diz.restproducer.loader.RestLoader;
 import de.unimarburg.diz.restproducer.sender.KafkaSender;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 @Service
 public class EtlManager {
@@ -52,95 +55,137 @@ public class EtlManager {
     final var levelOrderedElements = getEndpointNodes();
 
     // fixme: we need also a global parameter map to supply hierarchy calls and array iterations
-    var globalParameterMap = new HashMap<String, HashMap<String, Collection<String>>>();
+    /*
+    key: endpoint name
+    value: List_1 length is number of parent parameter values
+          List_2 length is number of parameter needed for current endpoint call
+          Pair <name,param_value>
+     */
+    var globalParameterMap = new HashMap<String, List<List<StringPair>>>();
 
-    var messageStream =
+    Stream<Message> messages =
         levelOrderedElements.stream()
             .map(
                 endpointNode -> {
+                  var parameterListForCurrentEndpoint =
+                      globalParameterMap.getOrDefault(endpointNode.getKey(), new ArrayList<>());
 
-                  // inti global entry if needed
-                  HashMap<String, Collection<String>> endpointEntryMap =
-                      globalParameterMap.getOrDefault(endpointNode.getKey(), new HashMap<>());
-                  if (!globalParameterMap.containsKey(endpointNode.getKey())) {
-                    globalParameterMap.put(endpointNode.getKey(), endpointEntryMap);
-                  }
-                  var singleCallParams = new HashMap<String, String>();
-                  var currentEndpointVariables =
-                      LoaderUtil.getVariableNames(endpointNode.getNodeData().endpointAddress());
-                  if (!currentEndpointVariables.containsAll(endpointEntryMap.keySet())) {
-                    // may be need to discard not needed parameters
-                    log.error("variable missing!");
+                  final String endpointAddress = endpointNode.getNodeData().endpointAddress();
+
+                  // THIS PARAMETER DEFINED AT URL
+                  var currentEndpointVariables = LoaderUtil.getVariableNames(endpointAddress);
+                  var noParameterStored = parameterListForCurrentEndpoint.isEmpty();
+                  // TODO: CHECK: noParameterStored is true  && currentEndpointVariables not empty
+                  // -> error!!!
+
+                  Stream<String> messagesOfEndpoint;
+                  if (noParameterStored) {
+                    // call endpoint without parameter (usually root access point)
+                    final String endpointDataRecieved =
+                        callEndpoint(endpointAddress, new HashMap<>());
+                    messagesOfEndpoint = Stream.of(endpointDataRecieved);
+                    addCurrentParamsForChild(
+                        endpointNode, globalParameterMap, new ArrayList<>(), endpointDataRecieved);
 
                   } else {
-                    // fixme: get all parameter needed for call
-                    // iterate all call per endpoint
-                    // currentEndpointVariables.forEach(p->singleCallParams.put(p,));
+                    // iterate over call list
+                    // extract parameter
+                    messagesOfEndpoint =
+                        parameterListForCurrentEndpoint.stream()
+                            .map(
+                                endpointParameter -> {
+                                  var singleCallParams =
+                                      endpointParameter.stream()
+                                          .collect(
+                                              Collectors.toMap(
+                                                  StringPair::value1, StringPair::value2));
 
+                                  final String calledEndpoint =
+                                      callEndpoint(endpointAddress, singleCallParams);
+
+                                  addCurrentParamsForChild(
+                                      endpointNode,
+                                      globalParameterMap,
+                                      endpointParameter,
+                                      calledEndpoint);
+
+                                  return calledEndpoint;
+                                });
                   }
-                  try {
-                    // all relevant parameter from current and upper level nodes
 
-                    final String loadedJson =
-                        loader.load(endpointNode.getNodeData().endpointAddress(), singleCallParams);
+                  var msgForKafka =
+                      messagesOfEndpoint
+                          .map(
+                              rdata ->
+                                  extractMessages(
+                                      rdata,
+                                      endpointNode.getNodeData().extractionTarget(),
+                                      endpointNode.getNodeData().idProperty(),
+                                      endpointNode.getKey()))
+                          .flatMap(Collection::stream)
+                          .toList();
 
-                    // todo: populate global map if children or siblings are defined
-                    final boolean isChildNodeDefined =
-                        StringUtils.hasText(endpointNode.getNodeData().nextChildEndpointName());
-                    if (isChildNodeDefined) {
-                      var nextRefValues =
-                          LoaderUtil.getNextNodePropValue(
-                              endpointNode.getNodeData().nextNodeReference(), loadedJson);
-
-                      // variableName,list of values found (can be one or multiple in case of an
-                      // array)
-                      final String convertedPathToVariableName =
-                          LoaderUtil.convertPathToVariableName(
-                              endpointNode.getNodeData().nextNodeReference());
-
-                      if (!globalParameterMap.containsKey(
-                          endpointNode.getNodeData().nextChildEndpointName())) {
-                        // create entry if missing
-                        globalParameterMap.put(
-                            endpointNode.getNodeData().nextChildEndpointName(), new HashMap<>());
-                      }
-                      var childEndpointEntry =
-                          globalParameterMap.get(
-                              endpointNode.getNodeData().nextChildEndpointName());
-
-                      // these will be needed as query parameter at next level
-                      childEndpointEntry.put(convertedPathToVariableName, nextRefValues);
-                      // fixme: take current called parameter and add new identified
-
-                    }
-                    // this has to be send to kafka if it is indented to be stored
-
-                    if (StringUtils.hasText(endpointNode.getNodeData().extractionTarget())) {
-                      return extractMessages(
-                          loadedJson,
-                          endpointNode.getNodeData().extractionTarget(),
-                          endpointNode.getNodeData().idProperty(),
-                          endpointNode.getKey());
-                    }
-                    // no storage therefore skip value
-                    return null;
-                  } catch (MalformedURLException | UnsupportedEncodingException e) {
-                    throw new RuntimeException(e);
-                  }
-                });
-
+                  return msgForKafka;
+                })
+            .flatMap(Collection::stream);
+    var tempMssaes = messages.toList();
     var sendCount =
-        messageStream
-            .flatMap(Collection::stream)
+        tempMssaes.stream()
             .peek(m -> log.debug("sending message id '{}'...,", m.key()))
             .map(sender::send)
+            .filter(a -> a.booleanValue())
             .peek(result -> log.debug("message successfully sent: '{}'", result))
             .count();
     log.info("total messages sent: {}", sendCount);
     return sendCount;
   }
 
-  public Collection<Message> extractMessages(
+  protected void addCurrentParamsForChild(
+      EndpointNode endpointNode,
+      HashMap<String, List<List<StringPair>>> globalParameterMap,
+      List<StringPair> endpointParameter,
+      String dataJson) {
+
+    var childEntryMap =
+        globalParameterMap.getOrDefault(
+            endpointNode.getNodeData().nextChildEndpointName(), new ArrayList<>());
+    globalParameterMap.putIfAbsent(
+        endpointNode.getNodeData().nextChildEndpointName(), childEntryMap);
+    if (endpointNode.getNodeData().nextNodeReference() == null) {
+      return;
+    }
+
+    final String convertedPathToVariableName =
+        LoaderUtil.convertPathToVariableName(endpointNode.getNodeData().nextNodeReference());
+
+    var childEndpointParamValues =
+        LoaderUtil.getNextNodePropValue(endpointNode.getNodeData().nextNodeReference(), dataJson);
+
+    childEndpointParamValues.forEach(
+        childparam -> {
+          final ArrayList<StringPair> oneCallparams = new ArrayList<>();
+          childEntryMap.add(oneCallparams);
+
+          // param from endpoint data
+          oneCallparams.add(new StringPair(convertedPathToVariableName, childparam));
+          oneCallparams.addAll(endpointParameter);
+        });
+  }
+
+  private String callEndpoint(String address, Map<String, String> parameter) {
+
+    try {
+      final String loadedJson = loader.load(address, parameter);
+
+      return loadedJson;
+    } catch (MalformedURLException e) {
+      throw new RuntimeException(e);
+    } catch (UnsupportedEncodingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public List<Message> extractMessages(
       @NonNull String loadedJson,
       @NonNull String extractFromProperty,
       @NonNull String idProperty,
@@ -161,4 +206,7 @@ public class EtlManager {
     var levelOrderedElements = LoaderUtil.getAllNodesAsList(tree).reversed();
     return levelOrderedElements;
   }
+
+  // fast and simple - no need for additional libs
+  public record StringPair(String value1, String value2) {}
 }

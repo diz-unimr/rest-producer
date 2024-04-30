@@ -174,6 +174,8 @@ public class LoaderUtil {
    *
    * therefore we replace other characters with '_'
    *
+   * <p>e.g. 'jobs[*].job_id' -> 'jobs____job_id'
+   *
    * @param path json filter path to a property
    * @return url compatible variable name
    * @implNote if we get variable duplicates, this could be implemented more sophisticated, but for
