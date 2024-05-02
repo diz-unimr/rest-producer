@@ -157,20 +157,20 @@ class EtlManagerTest {
 
       var job1Map = Map.of("jobs____job_id", "11");
       when(restloader.load(
-          ArgumentMatchers.startsWith("https://target/job"),
-          argThat(new MapContainsAtLeastEntriesMatcher(job1Map))))
+              ArgumentMatchers.startsWith("https://target/job"),
+              argThat(new MapContainsAtLeastEntriesMatcher(job1Map))))
           .thenReturn(DummyValues.jobExample1);
 
       var job2Map = Map.of("jobs____job_id", "12");
       when(restloader.load(
-          ArgumentMatchers.startsWith("https://target/job"),
-          argThat(new MapContainsAtLeastEntriesMatcher(job2Map))))
+              ArgumentMatchers.startsWith("https://target/job"),
+              argThat(new MapContainsAtLeastEntriesMatcher(job2Map))))
           .thenReturn(DummyValues.jobExample2);
 
       var job3Map = Map.of("jobs____job_id", "12");
       when(restloader.load(
-          ArgumentMatchers.startsWith("https://target/job"),
-          argThat(new MapContainsAtLeastEntriesMatcher(job2Map))))
+              ArgumentMatchers.startsWith("https://target/job"),
+              argThat(new MapContainsAtLeastEntriesMatcher(job2Map))))
           .thenReturn(DummyValues.jobExample2);
 
       when(kafkaSender.send(any(Message.class))).thenReturn(true);
@@ -183,7 +183,6 @@ class EtlManagerTest {
       verify(kafkaSender, times(6)).send(any(Message.class));
     }
   }
-
 
   private class MapContainsAtLeastEntriesMatcher implements ArgumentMatcher<Map<String, String>> {
 
