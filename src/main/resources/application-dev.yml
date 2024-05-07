@@ -25,7 +25,7 @@ app:
 
     endpoints[0]:
       endpoint-name: "jobs"
-      endpoint-address: "https://target/jobs/?filter_string=COMPLETED_OKAY&{$pagination}"
+      endpoint-address: "https://target/jobs/?filter_string=COMPLETED_OKAY"
       id-property: "id"
       pagination: true
       page-size-param-name: "page_size"
@@ -36,19 +36,19 @@ app:
       next-node-reference: "jobs[*].job_id"
     endpoints[1]:
       endpoint-name: "job"
-      produce-to-kafka: true
-      endpoint-address: "https://target/job/{job_id}"
+      endpoint-address: "https://target/job/{jobs____job_id}"
       id-property: "id"
-      next-child-endpoint-name: "result-filtered-list"
+      next-child-endpoint-name: "result-cnv-list"
       next-node-reference: "samples[*].id"
+      extraction-target: "*"
     endpoints[2]:
-      endpoint-name: "result-filtered-list"
-      produce-to-kafka: true
-      endpoint-address: "https://target/jobs/{job_id}/samples/{samples-id}/results/cnv-filtered-list"
+      endpoint-name: "result-cnv-list"
+      endpoint-address: "https://target/jobs/{jobs____job_id}/samples/{samples____id}/results/cnv-filtered-list"
       id-property: "id"
       next-sibling-endpoint: "result-variant-filtered-list"
+      extraction-target: "*"
     endpoints[3]:
       endpoint-name: "result-variant-filtered-list"
-      produce-to-kafka: true
-      endpoint-address: "https://target/jobs/{job_id}/samples/{samples-id}/results/variant-filtered-list"
+      endpoint-address: "https://target/jobs/{jobs____job_id}/samples/{samples____id}/results/variant-filtered-list"
       id-property: "id"
+      extraction-target: "*"

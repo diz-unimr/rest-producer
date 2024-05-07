@@ -9,7 +9,10 @@ spring:
       security:
         protocol: PLAINTEXT
       client-id:
-
+logging:
+  level:
+    de:
+      unimarburg: debug
 app:
   proxyHost: "http://myDummyProxy.org"
   proxyPort: 8081
@@ -33,17 +36,17 @@ app:
       endpoint-name: "job"
       endpoint-address: "https://target/job/{jobs____job_id}"
       id-property: "id"
-      next-child-endpoint-name: "result-filtered-list"
+      next-child-endpoint-name: "result-cnv-list"
       next-node-reference: "samples[*].id"
-      extraction-target: "samples[*]"
+      extraction-target: "*"
     endpoints[2]:
-      endpoint-name: "result-filtered-list"
+      endpoint-name: "result-cnv-list"
       endpoint-address: "https://target/jobs/{jobs____job_id}/samples/{samples____id}/results/cnv-filtered-list"
       id-property: "id"
       next-sibling-endpoint: "result-variant-filtered-list"
-      extraction-target: "[*]"
+      extraction-target: "*"
     endpoints[3]:
       endpoint-name: "result-variant-filtered-list"
       endpoint-address: "https://target/jobs/{jobs____job_id}/samples/{samples____id}/results/variant-filtered-list"
       id-property: "id"
-      extraction-target: "[*]"
+      extraction-target: "*"
