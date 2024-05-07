@@ -9,7 +9,10 @@ spring:
       security:
         protocol: PLAINTEXT
       client-id:
-
+logging:
+  level:
+    de:
+      unimarburg: debug
 app:
   proxyHost: "http://myDummyProxy.org"
   proxyPort: 8081
