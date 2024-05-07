@@ -11,7 +11,6 @@ import de.unimarburg.diz.restproducer.config.LoaderConfigProperties;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Pattern;
@@ -56,16 +55,7 @@ public class LoaderUtil {
       throw new IllegalArgumentException("jsonPathExpression must have a value");
     if (!StringUtils.hasText(json)) return new ArrayList<>();
     final ParseContext parseContext = JsonPath.using(suppressExceptionConfiguration);
-    final Collection<String> read = parseContext.parse(json).read(jsonPathExpression);
-    return read;
-  }
-
-  public void getSiblings(EndpointNode node, List<EndpointNode> siblings) {
-    var result = new LinkedList<EndpointNode>();
-    siblings.add(node);
-    if (node.getNextSibling() != null) {
-      getSiblings(node.getNextSibling(), result);
-    }
+    return parseContext.parse(json).read(jsonPathExpression);
   }
 
   /**

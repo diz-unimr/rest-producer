@@ -120,21 +120,18 @@ public class EtlManager {
                                 });
                   }
 
-                  var msgForKafka =
-                      messagesOfEndpoint
-                          .filter(Objects::nonNull)
-                          .map(
-                              rdata ->
-                                  extractMessages(
-                                      rdata,
-                                      endpointNode.getNodeData().extractionTarget(),
-                                      endpointNode.getNodeData().idProperty(),
-                                      endpointNode.getKey()))
-                          .filter(Objects::nonNull)
-                          .flatMap(Collection::stream)
-                          .toList();
-
-                  return msgForKafka;
+                  return messagesOfEndpoint
+                      .filter(Objects::nonNull)
+                      .map(
+                          rdata ->
+                              extractMessages(
+                                  rdata,
+                                  endpointNode.getNodeData().extractionTarget(),
+                                  endpointNode.getNodeData().idProperty(),
+                                  endpointNode.getKey()))
+                      .filter(Objects::nonNull)
+                      .flatMap(Collection::stream)
+                      .toList();
                 })
             .flatMap(Collection::stream);
     var tempMssaes = messages.toList();
@@ -179,12 +176,14 @@ public class EtlManager {
           childEndpointParamValues,
           endpointParameter,
           globalParameterMap);
-      addParamsForSibling(
-          endpointNode.getFirstChild().getNextSibling(),
-          convertedPathToVariableName,
-          childEndpointParamValues,
-          endpointParameter,
-          globalParameterMap);
+      if (endpointNode.getFirstChild() != null) {
+        addParamsForSibling(
+            endpointNode.getFirstChild().getNextSibling(),
+            convertedPathToVariableName,
+            childEndpointParamValues,
+            endpointParameter,
+            globalParameterMap);
+      }
     }
   }
 
@@ -274,11 +273,9 @@ public class EtlManager {
   private String callEndpoint(String address, Map<String, String> parameter) {
 
     try {
-      final String loadedJson = loader.load(address, parameter);
-      return loadedJson;
-    } catch (MalformedURLException e) {
-      throw new RuntimeException(e);
-    } catch (UnsupportedEncodingException e) {
+      return loader.load(address, parameter);
+    } catch (MalformedURLException | UnsupportedEncodingException e) {
+      // todo: improve error handling
       throw new RuntimeException(e);
     }
   }
@@ -306,20 +303,16 @@ public class EtlManager {
         }
       }
 
-      final List<Message> read =
-          parseContext
-              .parse(loadedJson)
-              .map(
-                  extractFromProperty,
-                  (currentValue, configuration) -> {
-                    final String messageKey =
-                        parseContext.parse(currentValue).read(idProperty).toString();
-                    final Message message =
-                        new Message(targetTopic, messageKey, currentValue.toString());
-                    return message;
-                  })
-              .read(extractFromProperty);
-      return read;
+      return parseContext
+          .parse(loadedJson)
+          .map(
+              extractFromProperty,
+              (currentValue, configuration) -> {
+                final String messageKey =
+                    parseContext.parse(currentValue).read(idProperty).toString();
+                return new Message(targetTopic, messageKey, currentValue.toString());
+              })
+          .read(extractFromProperty);
     } catch (com.jayway.jsonpath.PathNotFoundException pathNotFoundException) {
       log.error("missing property in path");
       return null;
@@ -328,8 +321,7 @@ public class EtlManager {
 
   private List<EndpointNode> getEndpointNodes() {
     var tree = LoaderUtil.getNArrayTree(config.getLoaderConfigProperties());
-    var levelOrderedElements = LoaderUtil.getAllNodesAsList(tree).reversed();
-    return levelOrderedElements;
+    return LoaderUtil.getAllNodesAsList(tree).reversed();
   }
 
   // fast and simple - no need for additional libs

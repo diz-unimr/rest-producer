@@ -148,7 +148,7 @@ class EtlManagerTest {
     EtlManager etlManager;
 
     @BeforeEach
-    void setUpBeforeClass() throws Exception {
+    void setUpBefore() throws Exception {
       MockitoAnnotations.openMocks(this);
 
       etlManager = new EtlManager(restloader, kafkaSender, appConfiguration);
@@ -212,13 +212,8 @@ class EtlManagerTest {
     }
   }
 
-  private class MapContainsAtLeastEntriesMatcher implements ArgumentMatcher<Map<String, String>> {
-
-    public MapContainsAtLeastEntriesMatcher(Map<String, String> left) {
-      this.left = left;
-    }
-
-    private Map<String, String> left;
+  private record MapContainsAtLeastEntriesMatcher(Map<String, String> left)
+      implements ArgumentMatcher<Map<String, String>> {
 
     @Override
     public boolean matches(Map argument) {
