@@ -47,7 +47,7 @@ public class EtlManager {
   /**
    * // todo store offset // todo scheduled execution
    *
-   * @return
+   * @return number of produced messages
    */
   public long execute() {
 
@@ -79,7 +79,7 @@ public class EtlManager {
                   final String endpointAddress = endpointNode.getNodeData().endpointAddress();
 
                   // THIS PARAMETER DEFINED AT URL
-                  var currentEndpointVariables = LoaderUtil.getVariableNames(endpointAddress);
+                  // var currentEndpointVariables = LoaderUtil.getVariableNames(endpointAddress);
                   var noParameterStored = parameterListForCurrentEndpoint.isEmpty();
                   // TODO: CHECK: noParameterStored is true  && currentEndpointVariables not empty
                   // -> error!!!
