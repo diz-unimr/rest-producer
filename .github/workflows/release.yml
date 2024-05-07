@@ -73,7 +73,6 @@ jobs:
       - name: Execute image build and push
         run: |
           ./gradlew bootBuildImage
-          docker tag ghcr.io/diz-unimr/rest-producer ghcr.io/diz-unimr/rest-producer:${{ steps.meta.outputs.tags }}
-          docker push ghcr.io/diz-unimr/rest-producer
-          docker push ghcr.io/diz-unimr/rest-producer:${{ steps.meta.outputs.tags }}
+          docker tag docker.io/library/rest-producer:0.0.1-SNAPSHOT ${{ steps.meta.outputs.tags }}
+          docker push ${{ steps.meta.outputs.tags }}
           
