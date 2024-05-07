@@ -22,5 +22,3 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
       - name: Execute Gradle build
         run: ./gradlew build
-      - name: Execute Gradle buildImgae
-        run: ./gradlew bootBuildImage
