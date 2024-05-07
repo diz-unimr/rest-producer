@@ -38,34 +38,33 @@ public class DummyValues {
         }
         """;
 
-  public static final String jobExample2 =
-      """
+  public static final String jobExample2 = """
         {
         "id":12,
-        "samples": [
-            {"id":"121", "name":"sample C"},
-            {"id":"122", "name":"sample D"}
-            ]
         }
       """;
 
   public static final String resultFilteredList1 =
       """
       {
-      "id":"111", "note": "result note 1"
+      "id":"111", "sampleId": "111" ,"note": "filtered"
       }
     """;
 
   public static final String resultFilteredList2 =
       """
       {
-      "id":112, "note": "other result note"
+      "id":112, "sampleId": "111" ,"note": "filtered2"
       }
     """;
 
-  public static final String resultVariantFilteredList =
+  public static final String resultCNVFilteredList =
       """
-      "id":111, "note":"any other note"
+      {"id":111, "sampleId": "111", "note":"CNV"}
+    """;
+  public static final String resultCNVFilteredList2 =
+      """
+      {"id":112, ,"sampleId": "111",  "note":"CNV2"}
     """;
 
   public static final ConcurrentMap<String, List<List<StringPair>>> getDummyGlobalParams() {

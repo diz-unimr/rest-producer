@@ -1,7 +1,10 @@
 /* GNU AFFERO GENERAL PUBLIC LICENSE  Version 3 (C)2024 Datenintegrationszentrum Fachbereich Medizin Philipps Universität Marburg */
 package de.unimarburg.diz.restproducer.loader;
 
+import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.ParseContext;
 import de.unimarburg.diz.restproducer.config.EndpointNode;
 import de.unimarburg.diz.restproducer.config.EndpointNodeProperties;
 import de.unimarburg.diz.restproducer.config.LoaderConfigProperties;
@@ -20,6 +23,9 @@ import org.springframework.util.StringUtils;
 public class LoaderUtil {
 
   private static final Logger log = LoggerFactory.getLogger(LoaderUtil.class);
+
+  protected static Configuration suppressExceptionConfiguration =
+      Configuration.defaultConfiguration().addOptions(Option.SUPPRESS_EXCEPTIONS);
 
   public static List<EndpointNode> getAllNodesAsList(EndpointNode root) {
     if (root == null) {
@@ -49,8 +55,9 @@ public class LoaderUtil {
     if (!StringUtils.hasText(jsonPathExpression))
       throw new IllegalArgumentException("jsonPathExpression must have a value");
     if (!StringUtils.hasText(json)) return new ArrayList<>();
-
-    return JsonPath.parse(json).read(jsonPathExpression);
+    final ParseContext parseContext = JsonPath.using(suppressExceptionConfiguration);
+    final Collection<String> read = parseContext.parse(json).read(jsonPathExpression);
+    return read;
   }
 
   public void getSiblings(EndpointNode node, List<EndpointNode> siblings) {

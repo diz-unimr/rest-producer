@@ -1,7 +1,10 @@
 /* GNU AFFERO GENERAL PUBLIC LICENSE  Version 3 (C)2024 Datenintegrationszentrum Fachbereich Medizin Philipps Universität Marburg */
 package de.unimarburg.diz.restproducer.manager;
 
+import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.ParseContext;
 import de.unimarburg.diz.restproducer.config.AppConfiguration;
 import de.unimarburg.diz.restproducer.config.EndpointNode;
 import de.unimarburg.diz.restproducer.data.Message;
@@ -22,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 public class EtlManager {
@@ -30,6 +34,8 @@ public class EtlManager {
   private final KafkaSender sender;
   private final AppConfiguration config;
   private static final Logger log = LoggerFactory.getLogger(EtlManager.class);
+  protected Configuration suppressExceptionConfiguration =
+      Configuration.defaultConfiguration().addOptions(Option.SUPPRESS_EXCEPTIONS);
 
   @Autowired
   public EtlManager(RestLoader loader, KafkaSender sender, AppConfiguration config) {
@@ -81,11 +87,11 @@ public class EtlManager {
                   Stream<String> messagesOfEndpoint;
                   if (noParameterStored) {
                     // call endpoint without parameter (usually root access point)
-                    final String endpointDataRecieved =
+                    final String endpointDataReceived =
                         callEndpoint(endpointAddress, new HashMap<>());
-                    messagesOfEndpoint = Stream.of(endpointDataRecieved);
+                    messagesOfEndpoint = Stream.of(endpointDataReceived);
                     addCurrentParamsForChild(
-                        endpointNode, globalParameterMap, new ArrayList<>(), endpointDataRecieved);
+                        endpointNode, globalParameterMap, new ArrayList<>(), endpointDataReceived);
 
                   } else {
                     // iterate over call list
@@ -115,6 +121,7 @@ public class EtlManager {
 
                   var msgForKafka =
                       messagesOfEndpoint
+                          .filter(m -> m != null)
                           .map(
                               rdata ->
                                   extractMessages(
@@ -122,6 +129,7 @@ public class EtlManager {
                                       endpointNode.getNodeData().extractionTarget(),
                                       endpointNode.getNodeData().idProperty(),
                                       endpointNode.getKey()))
+                          .filter(a -> a != null)
                           .flatMap(Collection::stream)
                           .toList();
 
@@ -129,9 +137,12 @@ public class EtlManager {
                 })
             .flatMap(Collection::stream);
     var tempMssaes = messages.toList();
+    tempMssaes.forEach(
+        m -> log.debug("sending message id '{}' - content '{}',", m.key(), m.payload()));
     var sendCount =
         tempMssaes.stream()
-            .peek(m -> log.debug("sending message id '{}'...,", m.key()))
+            .filter(a -> a != null)
+            .peek(m -> log.debug("sending message id '{}'", m.key()))
             .map(sender::send)
             .filter(a -> a.booleanValue())
             .peek(result -> log.debug("message successfully sent: '{}'", result))
@@ -140,43 +151,124 @@ public class EtlManager {
     return sendCount;
   }
 
+  /**
+   * @param endpointNode
+   * @param globalParameterMap
+   * @param endpointParameter
+   * @param dataJson
+   */
   protected void addCurrentParamsForChild(
       EndpointNode endpointNode,
       HashMap<String, List<List<StringPair>>> globalParameterMap,
       List<StringPair> endpointParameter,
       String dataJson) {
 
-    var childEntryMap =
-        globalParameterMap.getOrDefault(
-            endpointNode.getNodeData().nextChildEndpointName(), new ArrayList<>());
-    globalParameterMap.putIfAbsent(
-        endpointNode.getNodeData().nextChildEndpointName(), childEntryMap);
-    if (endpointNode.getNodeData().nextNodeReference() == null) {
+    if (endpointNode.getNodeData().nextNodeReference() != null) {
+      final String convertedPathToVariableName =
+          LoaderUtil.convertPathToVariableName(endpointNode.getNodeData().nextNodeReference());
+
+      var childEndpointParamValues =
+          LoaderUtil.getNextNodePropValue(endpointNode.getNodeData().nextNodeReference(), dataJson);
+
+      addParamsForEndpoint(
+          endpointNode.getNodeData().nextChildEndpointName(),
+          convertedPathToVariableName,
+          childEndpointParamValues,
+          endpointParameter,
+          globalParameterMap);
+      addParamsForSibling(
+          endpointNode.getFirstChild().getNextSibling(),
+          convertedPathToVariableName,
+          childEndpointParamValues,
+          endpointParameter,
+          globalParameterMap);
+    }
+  }
+
+  /**
+   * @param endpointName endpoint for which we want to store parameter
+   * @param targetParameterName converted parameter reference {@link
+   *     LoaderUtil#convertPathToVariableName(String)}
+   * @param values create entries for each value (get from {@link
+   *     LoaderUtil#getNextNodePropValue(String, String)})
+   * @param previousEndpointParameter parameter and their values
+   * @param globalParameterMap global parameter store
+   */
+  protected void addParamsForEndpoint(
+      String endpointName,
+      String targetParameterName,
+      Collection<String> values,
+      List<StringPair> previousEndpointParameter,
+      HashMap<String, List<List<StringPair>>> globalParameterMap) {
+    if (globalParameterMap == null)
+      throw new IllegalArgumentException("globalParameterMap must not be null");
+
+    if (!StringUtils.hasText(endpointName)) {
+      return;
+    }
+    // init map - even if we have no values
+    var parameterMap = globalParameterMap.getOrDefault(endpointName, new ArrayList<>());
+    globalParameterMap.putIfAbsent(endpointName, parameterMap);
+
+    if (!StringUtils.hasText(targetParameterName) || values.isEmpty()) {
       return;
     }
 
-    final String convertedPathToVariableName =
-        LoaderUtil.convertPathToVariableName(endpointNode.getNodeData().nextNodeReference());
-
-    var childEndpointParamValues =
-        LoaderUtil.getNextNodePropValue(endpointNode.getNodeData().nextNodeReference(), dataJson);
-
-    childEndpointParamValues.forEach(
-        childparam -> {
-          final ArrayList<StringPair> oneCallparams = new ArrayList<>();
-          childEntryMap.add(oneCallparams);
+    values.forEach(
+        paramValue -> {
+          final ArrayList<StringPair> nameAndValue = new ArrayList<>();
+          parameterMap.add(nameAndValue);
 
           // param from endpoint data
-          oneCallparams.add(new StringPair(convertedPathToVariableName, childparam));
-          oneCallparams.addAll(endpointParameter);
+          if (previousEndpointParameter != null) {
+            // may be null
+            nameAndValue.addAll(previousEndpointParameter);
+          }
+          nameAndValue.add(new StringPair(targetParameterName, paramValue));
         });
+  }
+
+  /**
+   * @param endpoint endpoint for which we want to store parameter
+   * @param targetParameterName converted parameter reference {@link
+   *     LoaderUtil#convertPathToVariableName(String)}
+   * @param values create entries for each value (get from {@link
+   *     LoaderUtil#getNextNodePropValue(String, String)})
+   * @param previousEndpointParameter parameter and their values
+   * @param globalParameterMap global parameter store
+   */
+  protected void addParamsForSibling(
+      EndpointNode endpoint,
+      String targetParameterName,
+      Collection<String> values,
+      List<StringPair> previousEndpointParameter,
+      HashMap<String, List<List<StringPair>>> globalParameterMap) {
+    if (globalParameterMap == null)
+      throw new IllegalArgumentException("globalParameterMap must not be null");
+
+    if (endpoint == null) {
+      return;
+    }
+
+    addParamsForSibling(
+        endpoint.getNextSibling(),
+        targetParameterName,
+        values,
+        previousEndpointParameter,
+        globalParameterMap);
+
+    addParamsForEndpoint(
+        endpoint.getKey(),
+        targetParameterName,
+        values,
+        previousEndpointParameter,
+        globalParameterMap);
   }
 
   private String callEndpoint(String address, Map<String, String> parameter) {
 
     try {
       final String loadedJson = loader.load(address, parameter);
-
       return loadedJson;
     } catch (MalformedURLException e) {
       throw new RuntimeException(e);
@@ -187,18 +279,45 @@ public class EtlManager {
 
   public List<Message> extractMessages(
       @NonNull String loadedJson,
-      @NonNull String extractFromProperty,
+      String extractFromProperty,
       @NonNull String idProperty,
-      @NonNull String targetTopic) {
+      String targetTopic) {
 
-    return JsonPath.parse(loadedJson)
-        .map(
-            extractFromProperty,
-            (currentValue, configuration) -> {
-              final String messageKey = JsonPath.parse(currentValue).read(idProperty).toString();
-              return new Message(targetTopic, messageKey, currentValue.toString());
-            })
-        .read(extractFromProperty);
+    if (extractFromProperty == null) {
+      return new ArrayList<>();
+    }
+    final ParseContext parseContext = JsonPath.using(suppressExceptionConfiguration);
+    try {
+
+      if (extractFromProperty.equals("*")) {
+        try {
+          final String property = parseContext.parse(loadedJson).read(idProperty).toString();
+
+          return List.of(new Message(targetTopic, property, loadedJson));
+        } catch (com.jayway.jsonpath.PathNotFoundException pnfe) {
+          log.warn("property %s is missing in json".formatted(idProperty));
+          return null;
+        }
+      }
+
+      final List<Message> read =
+          parseContext
+              .parse(loadedJson)
+              .map(
+                  extractFromProperty,
+                  (currentValue, configuration) -> {
+                    final String messageKey =
+                        parseContext.parse(currentValue).read(idProperty).toString();
+                    final Message message =
+                        new Message(targetTopic, messageKey, currentValue.toString());
+                    return message;
+                  })
+              .read(extractFromProperty);
+      return read;
+    } catch (com.jayway.jsonpath.PathNotFoundException pathNotFoundException) {
+      log.error("missing property in path");
+      return null;
+    }
   }
 
   private List<EndpointNode> getEndpointNodes() {

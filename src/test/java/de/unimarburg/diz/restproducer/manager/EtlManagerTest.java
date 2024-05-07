@@ -17,7 +17,6 @@ import de.unimarburg.diz.restproducer.loader.RestLoader;
 import de.unimarburg.diz.restproducer.sender.KafkaSender;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -124,16 +123,18 @@ class EtlManagerTest {
     }
 
     @Test
-    void execute() {
+    void execute2Level() {
       assertThat(etlManager).isNotNull();
-      assertThat(etlManager.execute()).as("2 entries at jobs á 2 samples").isEqualTo(6);
-      verify(kafkaSender, times(6)).send(any(Message.class));
+      assertThat(etlManager.execute())
+          .as(
+              "2 entries at jobs + 2 sample at first job, second job has no samples - therefore no additional sample entries.")
+          .isEqualTo(4);
+      verify(kafkaSender, times(4)).send(any(Message.class));
     }
   }
 
   @SpringBootTest
   @ActiveProfiles("test")
-  @Disabled("WIP")
   @ExtendWith(SpringExtension.class)
   @Nested
   class EtlManagerThreeLevelTest {
@@ -152,33 +153,60 @@ class EtlManagerTest {
 
       etlManager = new EtlManager(restloader, kafkaSender, appConfiguration);
 
-      when(restloader.load(ArgumentMatchers.startsWith("https://target/jobs/"), anyMap()))
+      // will not be stored
+      when(restloader.load(
+              ArgumentMatchers.contains("https://target/jobs/?filter_string=COMPLETED_OKAY"),
+              anyMap()))
           .thenReturn(DummyValues.jobsExample1);
 
+      // extract one message 11 to job topic
       var job1Map = Map.of("jobs____job_id", "11");
       when(restloader.load(
-              ArgumentMatchers.startsWith("https://target/job"),
+              ArgumentMatchers.contains("https://target/job/{jobs____job_id}"),
               argThat(new MapContainsAtLeastEntriesMatcher(job1Map))))
           .thenReturn(DummyValues.jobExample1);
 
+      // extract one message id 12 to job topic
       var job2Map = Map.of("jobs____job_id", "12");
       when(restloader.load(
-              ArgumentMatchers.startsWith("https://target/job"),
+              ArgumentMatchers.contains("https://target/job/{jobs____job_id}"),
               argThat(new MapContainsAtLeastEntriesMatcher(job2Map))))
           .thenReturn(DummyValues.jobExample2);
 
-      var job3Map = Map.of("jobs____job_id", "12");
+      var job3Map_A = Map.of("samples____id", "111");
       when(restloader.load(
-              ArgumentMatchers.startsWith("https://target/job"),
-              argThat(new MapContainsAtLeastEntriesMatcher(job2Map))))
-          .thenReturn(DummyValues.jobExample2);
+              ArgumentMatchers.contains(
+                  "https://target/jobs/{jobs____job_id}/samples/{samples____id}/results/cnv-filtered-list"),
+              argThat(new MapContainsAtLeastEntriesMatcher(job3Map_A))))
+          .thenReturn(DummyValues.resultCNVFilteredList);
 
+      var job3Map_B = Map.of("samples____id", "112");
+      when(restloader.load(
+              ArgumentMatchers.contains(
+                  "https://target/jobs/{jobs____job_id}/samples/{samples____id}/results/cnv-filtered-list"),
+              argThat(new MapContainsAtLeastEntriesMatcher(job3Map_B))))
+          .thenReturn(DummyValues.resultCNVFilteredList2);
+
+      var job3Map_C = Map.of("samples____id", "111");
+      when(restloader.load(
+              ArgumentMatchers.contains(
+                  "https://target/jobs/{jobs____job_id}/samples/{samples____id}/results/variant-filtered-list"),
+              argThat(new MapContainsAtLeastEntriesMatcher(job3Map_C))))
+          .thenReturn(DummyValues.resultFilteredList1);
+
+      var job3Map_D = Map.of("samples____id", "112");
+      when(restloader.load(
+              ArgumentMatchers.contains(
+                  "https://target/jobs/{jobs____job_id}/samples/{samples____id}/results/variant-filtered-list"),
+              argThat(new MapContainsAtLeastEntriesMatcher(job3Map_D))))
+          .thenReturn(DummyValues.resultFilteredList2);
       when(kafkaSender.send(any(Message.class))).thenReturn(true);
     }
 
     @Test
-    void execute() {
+    void execute3Level() {
       assertThat(etlManager).isNotNull();
+      // fix
       assertThat(etlManager.execute()).as("2 entries at jobs á 2 samples").isEqualTo(6);
       verify(kafkaSender, times(6)).send(any(Message.class));
     }
