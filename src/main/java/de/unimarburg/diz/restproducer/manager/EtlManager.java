@@ -18,6 +18,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -90,7 +91,7 @@ public class EtlManager {
                     final String endpointDataReceived =
                         callEndpoint(endpointAddress, new HashMap<>());
                     messagesOfEndpoint = Stream.of(endpointDataReceived);
-                    addCurrentParamsForChild(
+                    addParamsForChildAndSiblings(
                         endpointNode, globalParameterMap, new ArrayList<>(), endpointDataReceived);
 
                   } else {
@@ -109,7 +110,7 @@ public class EtlManager {
                                   final String calledEndpoint =
                                       callEndpoint(endpointAddress, singleCallParams);
 
-                                  addCurrentParamsForChild(
+                                  addParamsForChildAndSiblings(
                                       endpointNode,
                                       globalParameterMap,
                                       endpointParameter,
@@ -121,7 +122,7 @@ public class EtlManager {
 
                   var msgForKafka =
                       messagesOfEndpoint
-                          .filter(m -> m != null)
+                          .filter(Objects::nonNull)
                           .map(
                               rdata ->
                                   extractMessages(
@@ -129,7 +130,7 @@ public class EtlManager {
                                       endpointNode.getNodeData().extractionTarget(),
                                       endpointNode.getNodeData().idProperty(),
                                       endpointNode.getKey()))
-                          .filter(a -> a != null)
+                          .filter(Objects::nonNull)
                           .flatMap(Collection::stream)
                           .toList();
 
@@ -141,29 +142,31 @@ public class EtlManager {
         m -> log.debug("sending message id '{}' - content '{}',", m.key(), m.payload()));
     var sendCount =
         tempMssaes.stream()
-            .filter(a -> a != null)
+            .filter(Objects::nonNull)
             .peek(m -> log.debug("sending message id '{}'", m.key()))
             .map(sender::send)
-            .filter(a -> a.booleanValue())
-            .peek(result -> log.debug("message successfully sent: '{}'", result))
+            .filter(a -> a)
             .count();
     log.info("total messages sent: {}", sendCount);
     return sendCount;
   }
 
   /**
-   * @param endpointNode
-   * @param globalParameterMap
-   * @param endpointParameter
-   * @param dataJson
+   * Add parameter values for node children and siblings
+   *
+   * @param endpointNode current processed node
+   * @param globalParameterMap global parameter store
+   * @param endpointParameter current parameter used to call endpoint
+   * @param dataJson data returned by current endpoint
    */
-  protected void addCurrentParamsForChild(
+  protected void addParamsForChildAndSiblings(
       EndpointNode endpointNode,
       HashMap<String, List<List<StringPair>>> globalParameterMap,
       List<StringPair> endpointParameter,
       String dataJson) {
 
-    if (endpointNode.getNodeData().nextNodeReference() != null) {
+    final boolean isNextNodeDefined = endpointNode.getNodeData().nextNodeReference() != null;
+    if (isNextNodeDefined) {
       final String convertedPathToVariableName =
           LoaderUtil.convertPathToVariableName(endpointNode.getNodeData().nextNodeReference());
 
@@ -229,6 +232,8 @@ public class EtlManager {
   }
 
   /**
+   * Add currently extracted parameter values for all siblings (travers node tree in-level)
+   *
    * @param endpoint endpoint for which we want to store parameter
    * @param targetParameterName converted parameter reference {@link
    *     LoaderUtil#convertPathToVariableName(String)}
@@ -236,6 +241,7 @@ public class EtlManager {
    *     LoaderUtil#getNextNodePropValue(String, String)})
    * @param previousEndpointParameter parameter and their values
    * @param globalParameterMap global parameter store
+   * @implNote recursive call
    */
   protected void addParamsForSibling(
       EndpointNode endpoint,
