@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import de.unimarburg.diz.restproducer.config.AppConfiguration;
+import de.unimarburg.diz.restproducer.config.KafkaProducerConfig;
 import de.unimarburg.diz.restproducer.data.Message;
 import de.unimarburg.diz.restproducer.loader.DummyValues;
 import de.unimarburg.diz.restproducer.loader.RestLoader;
@@ -25,15 +26,26 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.web.client.RestTemplateAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.web.client.RestTemplate;
 
 class EtlManagerTest {
 
   @Nested
   @ExtendWith(SpringExtension.class)
-  @SpringBootTest
+  @SpringBootTest(
+      classes = {
+        KafkaProducerConfig.class,
+        AppConfiguration.class,
+        EtlManager.class,
+        RestTemplate.class,
+        RestTemplateAutoConfiguration.class,
+        RestLoader.class,
+        KafkaSender.class
+      })
   class basicProcessingTest {
 
     @Autowired AppConfiguration appConfiguration;

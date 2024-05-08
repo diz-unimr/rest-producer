@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import de.unimarburg.diz.restproducer.config.AppConfiguration;
 import de.unimarburg.diz.restproducer.config.EndpointNodeProperties;
+import de.unimarburg.diz.restproducer.config.KafkaProducerConfig;
 import java.util.Collection;
 import java.util.List;
 import org.json.JSONException;
@@ -14,9 +15,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.web.client.RestTemplateAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.web.client.RestTemplate;
 
 class LoaderUtilTest {
 
@@ -40,7 +43,13 @@ class LoaderUtilTest {
   }
 
   @Nested
-  @SpringBootTest
+  @SpringBootTest(
+      classes = {
+        KafkaProducerConfig.class,
+        AppConfiguration.class,
+        RestTemplate.class,
+        RestTemplateAutoConfiguration.class
+      })
   @TestPropertySource(
       properties = {
         "app.loader.username=test",
@@ -60,7 +69,8 @@ class LoaderUtilTest {
   }
 
   @Nested
-  @SpringBootTest
+  @SpringBootTest(
+      classes = {AppConfiguration.class, RestTemplate.class, RestTemplateAutoConfiguration.class})
   @ActiveProfiles("test")
   class validBehaviour {
     @Autowired AppConfiguration config;
