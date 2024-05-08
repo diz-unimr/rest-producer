@@ -33,16 +33,16 @@ class KafkaSenderTest {
 
   KafkaSender kafkaSender;
   @Autowired AppConfiguration config;
-  @Mock KafkaTemplate kafkaTemplate;
+  @Mock KafkaTemplate<String, String> kafkaTemplate;
 
-  @Mock SendResult successful;
+  @Mock SendResult<String, String> successful;
 
   @BeforeEach
   void setUpBeforeClass() {
     MockitoAnnotations.openMocks(this);
     kafkaSender = new KafkaSender(config, kafkaTemplate);
     when(successful.getRecordMetadata()).thenReturn(Mockito.mock(RecordMetadata.class));
-    when(successful.getRecordMetadata().offset()).thenReturn(42l);
+    when(successful.getRecordMetadata().offset()).thenReturn(42L);
     when(kafkaTemplate.send(any(ProducerRecord.class)))
         .thenReturn(CompletableFuture.completedFuture(successful));
   }
