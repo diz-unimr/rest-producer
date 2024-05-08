@@ -1,7 +1,6 @@
 /* GNU AFFERO GENERAL PUBLIC LICENSE  Version 3 (C)2024 Datenintegrationszentrum Fachbereich Medizin Philipps Universität Marburg */
 package de.unimarburg.diz.restproducer.loader;
 
-import de.unimarburg.diz.restproducer.config.LoaderConfigProperties;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.util.Map;
@@ -10,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
@@ -21,8 +19,7 @@ import org.springframework.web.client.RestTemplate;
 @Service
 public class RestLoader implements ILoader {
   private static final Logger log = LoggerFactory.getLogger(RestLoader.class);
-  protected HttpHeaders basicAuthHeader = null;
-  LoaderConfigProperties config;
+
   RestTemplate restTemplate;
 
   @Autowired
@@ -36,9 +33,6 @@ public class RestLoader implements ILoader {
       throws MalformedURLException, UnsupportedEncodingException {
 
     // todo: retry
-    /* var queryParameter =
-            getQueryParameter(endpoint.getNodeData().endpointAddress()), null);
-    */
     var result =
         RestClient.builder(restTemplate)
             .build()
@@ -53,9 +47,6 @@ public class RestLoader implements ILoader {
           "check your configuration rest call got no result and you have provided no parameters.");
     }
 
-    // var paramsForNextEndpoint=
-    // LoaderUtil.getNextNodePropValue(endpoint.getNodeData().nextNodeReference(),result.getBody());
-    // parameter.put(endpoint.getKey(),paramsForNextEndpoint);
     return Objects.requireNonNull(result.getBody());
   }
 }
