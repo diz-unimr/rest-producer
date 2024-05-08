@@ -4,14 +4,12 @@ package de.unimarburg.diz.restproducer.loader;
 import de.unimarburg.diz.restproducer.config.LoaderConfigProperties;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
@@ -28,7 +26,7 @@ public class RestLoader implements ILoader {
   RestTemplate restTemplate;
 
   @Autowired
-  public RestLoader(RestTemplate restTemplate) {
+  public RestLoader(@Qualifier("restTemplateBasicAuth") RestTemplate restTemplate) {
     this.restTemplate = restTemplate;
   }
 
@@ -59,16 +57,5 @@ public class RestLoader implements ILoader {
     // LoaderUtil.getNextNodePropValue(endpoint.getNodeData().nextNodeReference(),result.getBody());
     // parameter.put(endpoint.getKey(),paramsForNextEndpoint);
     return Objects.requireNonNull(result.getBody());
-  }
-
-  public static HashSet<String> getQueryParameter(String url) throws UnsupportedEncodingException {
-    var query_pairs = new HashSet<String>();
-
-    String[] pairs = url.split("&");
-    for (String pair : pairs) {
-      int idx = pair.indexOf('=');
-      query_pairs.add(URLDecoder.decode(pair.substring(0, idx), StandardCharsets.UTF_8));
-    }
-    return query_pairs;
   }
 }

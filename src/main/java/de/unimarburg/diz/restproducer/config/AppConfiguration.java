@@ -43,7 +43,7 @@ public class AppConfiguration {
         + '}';
   }
 
-  @Bean
+  @Bean("restTemplateBasicAuth")
   public RestTemplate restTemplate(RestTemplateBuilder builder) {
     var cfg = getLoaderConfigProperties();
     if (getLoaderConfigProperties().username() != null

@@ -202,8 +202,6 @@ public class EtlManager {
       Collection<String> values,
       List<StringPair> previousEndpointParameter,
       HashMap<String, List<List<StringPair>>> globalParameterMap) {
-    if (globalParameterMap == null)
-      throw new IllegalArgumentException("globalParameterMap must not be null");
 
     if (!StringUtils.hasText(endpointName)) {
       return;
