@@ -1,7 +1,6 @@
 /* GNU AFFERO GENERAL PUBLIC LICENSE  Version 3 (C)2024 Datenintegrationszentrum Fachbereich Medizin Philipps Universität Marburg */
 package de.unimarburg.diz.restproducer.sender;
 
-import de.unimarburg.diz.restproducer.config.AppConfiguration;
 import de.unimarburg.diz.restproducer.data.Message;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -16,13 +15,10 @@ import org.springframework.stereotype.Service;
 public class KafkaSender {
 
   @Autowired
-  public KafkaSender(
-      AppConfiguration appConfiguration, KafkaTemplate<String, String> kafkaTemplate) {
-    this.appConfiguration = appConfiguration;
+  public KafkaSender(KafkaTemplate<String, String> kafkaTemplate) {
     this.kafkaTemplate = kafkaTemplate;
   }
 
-  private final AppConfiguration appConfiguration;
   private final KafkaTemplate<String, String> kafkaTemplate;
   private static final Logger log = LoggerFactory.getLogger(KafkaSender.class);
 

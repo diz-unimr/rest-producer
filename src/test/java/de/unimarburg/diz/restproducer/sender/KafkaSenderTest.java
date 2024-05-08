@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import de.unimarburg.diz.restproducer.config.AppConfiguration;
 import de.unimarburg.diz.restproducer.config.KafkaProducerConfig;
 import de.unimarburg.diz.restproducer.data.Message;
 import java.util.concurrent.CompletableFuture;
@@ -32,7 +31,7 @@ class KafkaSenderTest {
   @Autowired KafkaProducerConfig kafkaProducerConfig;
 
   KafkaSender kafkaSender;
-  @Autowired AppConfiguration config;
+
   @Mock KafkaTemplate<String, String> kafkaTemplate;
 
   @Mock SendResult<String, String> successful;
@@ -40,7 +39,7 @@ class KafkaSenderTest {
   @BeforeEach
   void setUpBeforeClass() {
     MockitoAnnotations.openMocks(this);
-    kafkaSender = new KafkaSender(config, kafkaTemplate);
+    kafkaSender = new KafkaSender(kafkaTemplate);
     when(successful.getRecordMetadata()).thenReturn(Mockito.mock(RecordMetadata.class));
     when(successful.getRecordMetadata().offset()).thenReturn(42L);
     when(kafkaTemplate.send(any(ProducerRecord.class)))
