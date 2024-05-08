@@ -115,21 +115,5 @@ class LoaderUtilTest {
       assertThat(values).containsAll(List.of("11", "12"));
       assertThat(values).hasSize(2);
     }
-
-    private EndpointNodeProperties getEndpointNodeProperties(String nextNodeRefProperty) {
-      return new EndpointNodeProperties(
-          "testFindParam",
-          "http://localhost/test",
-          "child",
-          "idProp",
-          nextNodeRefProperty,
-          "http://localhost/nextSibling",
-          null,
-          null,
-          null,
-          null,
-          null,
-          null);
-    }
   }
 }
