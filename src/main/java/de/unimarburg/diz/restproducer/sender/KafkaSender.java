@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,13 +23,13 @@ public class KafkaSender {
 
   public boolean send(Message message) {
     final ProducerRecord<String, String> producerRecord =
-        new ProducerRecord(message.topic(), message.key(), message.payload());
+        new ProducerRecord<>(message.topic(), message.key(), message.payload());
 
     var sendResultFuture = kafkaTemplate.send(producerRecord);
     AtomicBoolean wasSendSuccessful = new AtomicBoolean(false);
     sendResultFuture.whenComplete(
         (result, e) -> {
-          if (result instanceof SendResult) {
+          if (result != null) {
             log.debug(
                 "Sent message=[{}] with offset=[{}]", message, result.getRecordMetadata().offset());
             wasSendSuccessful.set(true);

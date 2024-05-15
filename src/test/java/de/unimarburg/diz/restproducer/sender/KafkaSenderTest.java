@@ -62,8 +62,8 @@ class KafkaSenderTest {
 
   @Test
   void send_error() {
-    var rec = new ProducerRecord("", "", "");
-    when(kafkaTemplate.send(any(rec.getClass())))
+
+    when(kafkaTemplate.send(any(ProducerRecord.class)))
         .thenReturn(CompletableFuture.failedFuture(new Exception("fail!!")));
 
     assertThat(kafkaSender.send(new Message("test", "12", "foo"))).isFalse();
