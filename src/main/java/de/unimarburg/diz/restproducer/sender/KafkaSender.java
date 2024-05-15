@@ -20,28 +20,23 @@ public class KafkaSender {
   }
 
   private final KafkaTemplate<String, String> kafkaTemplate;
-  private static final Logger log = LoggerFactory.getLogger(KafkaSender.class);
+  protected final Logger log = LoggerFactory.getLogger(KafkaSender.class);
 
   public boolean send(Message message) {
-    final ProducerRecord producerRecord =
+    final ProducerRecord<String, String> producerRecord =
         new ProducerRecord(message.topic(), message.key(), message.payload());
 
     var sendResultFuture = kafkaTemplate.send(producerRecord);
     AtomicBoolean wasSendSuccessful = new AtomicBoolean(false);
     sendResultFuture.whenComplete(
-        (result, ex) -> {
-          if (ex == null) {
+        (result, e) -> {
+          if (result instanceof SendResult) {
             log.debug(
-                "Sent message=[{}] with offset=[{}]",
-                message,
-                ((SendResult) result).getRecordMetadata().offset());
+                "Sent message=[{}] with offset=[{}]", message, result.getRecordMetadata().offset());
             wasSendSuccessful.set(true);
           } else {
-            log.debug(
-                "Unable to send message=[{}] due to : {}",
-                message,
-                ((Exception) ex).getMessage(),
-                ex);
+
+            log.error("Unable to send message=[{}] due to : {}", message, e.getMessage());
             wasSendSuccessful.set(false);
           }
         });

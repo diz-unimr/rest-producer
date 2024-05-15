@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import de.unimarburg.diz.restproducer.config.AppConfiguration;
-import de.unimarburg.diz.restproducer.config.EndpointNodeProperties;
 import de.unimarburg.diz.restproducer.config.KafkaProducerConfig;
 import java.util.Collection;
 import java.util.List;
