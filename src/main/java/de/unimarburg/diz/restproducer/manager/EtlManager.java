@@ -25,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.lang.NonNull;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -50,6 +51,9 @@ public class EtlManager {
    *
    * @return number of produced messages
    */
+  @Scheduled(
+      cron = "${app.loader.cron-expression}",
+      initialDelayString = "${app.loader.init-delay}")
   public long execute() {
 
     /*
