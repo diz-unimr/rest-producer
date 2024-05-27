@@ -22,6 +22,9 @@ app:
   loader:
     password: "rest-password"
     username: "rest-user"
+    login-access-token: "https://target/login_get_token"
+    cron-expression: "2 3 * * *"
+    init-delay: "1000"
 
     endpoints[0]:
       endpoint-name: "jobs"
