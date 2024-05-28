@@ -70,7 +70,7 @@ spotless {
 
 		removeUnusedImports()
 
-		licenseHeader '/* GNU AFFERO GENERAL PUBLIC LICENSE  Version 3 (C)$YEAR Datenintegrationszentrum Fachbereich Medizin Philipps Universität Marburg */'
+		licenseHeader '/* GNU AFFERO GENERAL PUBLIC LICENSE Version 3 (C)$YEAR Datenintegrationszentrum Fachbereich Medizin Philipps Universität Marburg */'
 		formatAnnotations()
 		cleanthat()
 		googleJavaFormat() // has its own section below

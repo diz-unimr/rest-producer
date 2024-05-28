@@ -1,4 +1,4 @@
-/* GNU AFFERO GENERAL PUBLIC LICENSE  Version 3 (C)2024 Datenintegrationszentrum Fachbereich Medizin Philipps Universität Marburg */
+/* GNU AFFERO GENERAL PUBLIC LICENSE Version 3 (C)2024 Datenintegrationszentrum Fachbereich Medizin Philipps Universität Marburg */
 package de.unimarburg.diz.restproducer.manager;
 
 import static org.assertj.core.api.Assertions.assertThat;
