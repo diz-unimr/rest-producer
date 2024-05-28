@@ -75,6 +75,34 @@ class LoaderUtilTest {
     @Autowired AppConfiguration config;
 
     @Test
+    void checkCustomKey() {
+      assertThat(
+              config.getLoaderConfigProperties().endpoints().stream().findFirst().get().customKey())
+          .isNotNull();
+      assertThat(
+              config.getLoaderConfigProperties().endpoints().stream()
+                  .findFirst()
+                  .get()
+                  .customKey()
+                  .name())
+          .isEqualTo("otherKeyName");
+      assertThat(
+              config.getLoaderConfigProperties().endpoints().stream()
+                  .findFirst()
+                  .get()
+                  .customKey()
+                  .regEx())
+          .isEqualTo("[a-zA-Z0-9_-]*]");
+      assertThat(
+              config.getLoaderConfigProperties().endpoints().stream()
+                  .findFirst()
+                  .get()
+                  .customKey()
+                  .path())
+          .isEqualTo("otherId");
+    }
+
+    @Test
     void getNArrayTree() {
       var nArrayTree = LoaderUtil.getNArrayTree(config.getLoaderConfigProperties());
 

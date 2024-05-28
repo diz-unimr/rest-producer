@@ -101,6 +101,7 @@ class RestLoaderTest {
         null,
         null,
         null,
-        extractionTarget);
+        extractionTarget,
+        null);
   }
 }

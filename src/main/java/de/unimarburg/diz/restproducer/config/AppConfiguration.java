@@ -10,7 +10,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 
 @Configuration
-@EnableConfigurationProperties(value = {LoaderConfigProperties.class, AppConfigProperties.class})
+@EnableConfigurationProperties(
+    value = {LoaderConfigProperties.class, AppConfigProperties.class, CustomKeyProperties.class})
 public class AppConfiguration {
   private static final Logger log = LoggerFactory.getLogger(AppConfiguration.class);
   private final LoaderConfigProperties loaderConfigProperties;

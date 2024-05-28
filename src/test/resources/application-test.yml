@@ -32,6 +32,10 @@ app:
       page-start-value: 1
       next-child-endpoint-name: "job"
       next-node-reference: "jobs[*].job_id"
+      custom-key:
+        name: "otherKeyName"
+        path: "otherId"
+        reg-ex: "[a-zA-Z0-9_-]*]"
     endpoints[1]:
       endpoint-name: "job"
       endpoint-address: "https://target/job/{jobs____job_id}"

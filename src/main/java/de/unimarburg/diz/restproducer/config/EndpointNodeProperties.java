@@ -41,4 +41,5 @@ public record EndpointNodeProperties(
     @Nullable String pageSizeParamName,
     @Nullable Integer pageSizeValue,
     @Nullable Integer pageStartValue,
-    @Nullable String extractionTarget) {}
+    @Nullable String extractionTarget,
+    @Nullable CustomKeyProperties customKey) {}
