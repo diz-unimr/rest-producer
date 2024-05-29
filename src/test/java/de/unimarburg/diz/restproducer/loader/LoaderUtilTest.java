@@ -70,8 +70,8 @@ class LoaderUtilTest {
   @Nested
   @SpringBootTest(
       classes = {AppConfiguration.class, RestTemplate.class, RestTemplateAutoConfiguration.class})
-  @ActiveProfiles("test")
-  class validBehaviour {
+  @ActiveProfiles("customKey")
+  class customKafkaKey {
     @Autowired AppConfiguration config;
 
     @Test
@@ -92,7 +92,7 @@ class LoaderUtilTest {
                   .get()
                   .customKey()
                   .regEx())
-          .isEqualTo("[a-zA-Z0-9_-]*]");
+          .isEqualTo("HA[0-9]{1,8}-[0-9]{2,2}");
       assertThat(
               config.getLoaderConfigProperties().endpoints().stream()
                   .findFirst()
@@ -101,6 +101,14 @@ class LoaderUtilTest {
                   .path())
           .isEqualTo("otherId");
     }
+  }
+
+  @Nested
+  @SpringBootTest(
+      classes = {AppConfiguration.class, RestTemplate.class, RestTemplateAutoConfiguration.class})
+  @ActiveProfiles("test")
+  class validBehaviour {
+    @Autowired AppConfiguration config;
 
     @Test
     void getNArrayTree() {

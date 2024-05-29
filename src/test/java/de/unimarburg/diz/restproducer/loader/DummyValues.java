@@ -26,8 +26,8 @@ public class DummyValues {
         {
         "id":11,
         "samples": [
-            {"id":"111", "status":"OK", "name":"sample A"},
-            {"id":"112", "status":"OK", "name":"sample B"}
+            {"id":"111", "status":"OK", "sampleId":"HA2345-24_R1_S001", "name":"sample A"},
+            {"id":"112", "status":"OK", "sampleId":"HA2346-24_R1_S001" ,"name":"sample B"}
             ]
         }
         """;
@@ -60,4 +60,9 @@ public class DummyValues {
       """
       {"id":112, ,"sampleId": "111",  "note":"CNV2"}
     """;
+
+  public static final String sample_1 =
+      """
+      {"id":"111", "status":"OK", "sampleId":"HA2345-24_R1_S001", "name":"sample A"}
+      """;
 }

@@ -10,13 +10,20 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.ParseContext;
 import de.unimarburg.diz.restproducer.config.AppConfiguration;
+import de.unimarburg.diz.restproducer.config.CustomKeyProperties;
+import de.unimarburg.diz.restproducer.config.EndpointNodeProperties;
 import de.unimarburg.diz.restproducer.config.KafkaProducerConfig;
 import de.unimarburg.diz.restproducer.data.Message;
 import de.unimarburg.diz.restproducer.loader.DummyValues;
 import de.unimarburg.diz.restproducer.loader.RestLoader;
 import de.unimarburg.diz.restproducer.sender.KafkaSender;
 import java.util.Map;
+import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -54,12 +61,40 @@ class EtlManagerTest {
     @Test
     void extractMessages() {
 
+      var cfg =
+          new EndpointNodeProperties(
+              "testTopic",
+              null,
+              null,
+              "id",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              "jobs[*]",
+              null);
       assertThat(etlManager).isNotNull();
-      var messages =
-          etlManager.extractMessages(DummyValues.jobsExample1, "jobs[*]", "id", "testTopic");
+      var messages = etlManager.extractMessages(DummyValues.jobsExample1, cfg);
 
       assertThat(messages).isNotNull();
       assertThat(messages).hasSize(2);
+    }
+
+    @Test
+    void tryGetStringFromPattern_patternMatched() {
+      final String inputValue = "HA3678-24_S6_R2_001";
+      var extractedKey = etlManager.tryGetStringFromPattern(inputValue, "HA[0-9]{1,8}-[0-9]{2,2}");
+      assertThat(extractedKey).isEqualTo("HA3678-24");
+    }
+
+    @Test
+    void tryGetStringFromPattern_patternEmpty() {
+      final String inputValue = "HA3678-24_S6_R2_001";
+      var extractedKey = etlManager.tryGetStringFromPattern(inputValue, null);
+      assertThat(extractedKey).isEqualTo(inputValue);
     }
   }
 
@@ -221,6 +256,38 @@ class EtlManagerTest {
       // fix
       assertThat(etlManager.execute()).as("2 entries at jobs á 2 samples").isEqualTo(6);
       verify(kafkaSender, times(6)).send(any(Message.class));
+    }
+
+    @Test
+    void getKafkaMessageKey() {
+
+      final ParseContext parseContext =
+          JsonPath.using(
+              Configuration.defaultConfiguration().addOptions(Option.SUPPRESS_EXCEPTIONS));
+      EndpointNodeProperties config =
+          new EndpointNodeProperties(
+              null,
+              null,
+              null,
+              "id",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              new CustomKeyProperties("otherIdName", "sampleId", "HA[0-9]{1,8}-[0-9]{2,2}"));
+      var key = etlManager.getKafkaMessageKey(DummyValues.sample_1, config, parseContext);
+      assertThat(key).isNotEmpty();
+
+      var resultAsJson = new JSONObject(key);
+
+      assertThat(resultAsJson.has("id")).isTrue();
+      assertThat(resultAsJson.has("otherIdName")).isTrue();
+      assertThat(resultAsJson.get("id")).isEqualTo("111");
+      assertThat(resultAsJson.get("otherIdName")).isEqualTo("HA2345-24");
     }
   }
 

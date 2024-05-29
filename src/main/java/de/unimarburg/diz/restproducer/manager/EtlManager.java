@@ -7,6 +7,7 @@ import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.ParseContext;
 import de.unimarburg.diz.restproducer.config.AppConfiguration;
 import de.unimarburg.diz.restproducer.config.EndpointNode;
+import de.unimarburg.diz.restproducer.config.EndpointNodeProperties;
 import de.unimarburg.diz.restproducer.data.Message;
 import de.unimarburg.diz.restproducer.loader.LoaderUtil;
 import de.unimarburg.diz.restproducer.loader.RestLoader;
@@ -19,8 +20,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -126,13 +130,7 @@ public class EtlManager {
 
                   return messagesOfEndpoint
                       .filter(Objects::nonNull)
-                      .map(
-                          rdata ->
-                              extractMessages(
-                                  rdata,
-                                  endpointNode.getNodeData().extractionTarget(),
-                                  endpointNode.getNodeData().idProperty(),
-                                  endpointNode.getKey()))
+                      .map(rdata -> extractMessages(rdata, endpointNode.getNodeData()))
                       .filter(Objects::nonNull)
                       .flatMap(Collection::stream)
                       .toList();
@@ -282,25 +280,63 @@ public class EtlManager {
     }
   }
 
-  public List<Message> extractMessages(
-      @NonNull String loadedJson,
-      String extractFromProperty,
-      @NonNull String idProperty,
-      String targetTopic) {
+  public String getKafkaMessageKey(
+      String messagePayload, EndpointNodeProperties endpointConfig, ParseContext parseContext) {
 
-    if (extractFromProperty == null) {
+    String firstKeyValue =
+        parseContext.parse(messagePayload).read(endpointConfig.idProperty()).toString();
+
+    if (endpointConfig.customKey() != null) {
+
+      String customKeyValue =
+          parseContext.parse(messagePayload).read(endpointConfig.customKey().path()).toString();
+
+      customKeyValue = tryGetStringFromPattern(customKeyValue, endpointConfig.customKey().regEx());
+
+      var jsonKey = new JSONObject();
+      jsonKey.put("id", firstKeyValue);
+      jsonKey.put(endpointConfig.customKey().name(), customKeyValue);
+
+      return jsonKey.toString();
+    } else {
+      return firstKeyValue;
+    }
+  }
+
+  protected String tryGetStringFromPattern(String customKeyValue, String pattern) {
+    if (!StringUtils.hasText(pattern)) return customKeyValue;
+
+    Pattern regEx = Pattern.compile(pattern);
+    Matcher matcher = regEx.matcher(customKeyValue);
+    if (matcher.find()) {
+      var extractedKey = matcher.group();
+      if (StringUtils.hasText(extractedKey)) return extractedKey;
+    }
+
+    return customKeyValue;
+  }
+
+  /**
+   * @param loadedJson
+   * @param endpointNodeProperties configuration for endpoint
+   * @return list of messages
+   */
+  public List<Message> extractMessages(
+      @NonNull String loadedJson, EndpointNodeProperties endpointNodeProperties) {
+
+    if (endpointNodeProperties.extractionTarget() == null) {
       return new ArrayList<>();
     }
     final ParseContext parseContext = JsonPath.using(suppressExceptionConfiguration);
     try {
 
-      if (extractFromProperty.equals("*")) {
+      if (endpointNodeProperties.extractionTarget().equals("*")) {
         try {
-          final String property = parseContext.parse(loadedJson).read(idProperty).toString();
+          final String key = getKafkaMessageKey(loadedJson, endpointNodeProperties, parseContext);
 
-          return List.of(new Message(targetTopic, property, loadedJson));
+          return List.of(new Message(endpointNodeProperties.endpointName(), key, loadedJson));
         } catch (com.jayway.jsonpath.PathNotFoundException pnfe) {
-          log.warn("property %s is missing in json".formatted(idProperty));
+          log.warn("property %s is missing in json".formatted(endpointNodeProperties.idProperty()));
           return null;
         }
       }
@@ -308,13 +344,18 @@ public class EtlManager {
       return parseContext
           .parse(loadedJson)
           .map(
-              extractFromProperty,
+              endpointNodeProperties.extractionTarget(),
               (currentValue, configuration) -> {
                 final String messageKey =
-                    parseContext.parse(currentValue).read(idProperty).toString();
-                return new Message(targetTopic, messageKey, currentValue.toString());
+                    getKafkaMessageKey(
+                        parseContext.parse(currentValue).jsonString(),
+                        endpointNodeProperties,
+                        parseContext);
+
+                return new Message(
+                    endpointNodeProperties.endpointName(), messageKey, currentValue.toString());
               })
-          .read(extractFromProperty);
+          .read(endpointNodeProperties.extractionTarget());
     } catch (com.jayway.jsonpath.PathNotFoundException pathNotFoundException) {
       log.error("missing property in path");
       return null;

@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: rest-producer
+  kafka:
+    bootstrap-servers: "localhost:9092"
+    producer:
+      compression-type: gzip
+      retries: 3
+      security:
+        protocol: PLAINTEXT
+      client-id:
+logging:
+  level:
+    de:
+      unimarburg: debug
+app:
+  proxyHost: "http://myDummyProxy.org"
+  proxyPort: 8081
+
+  loader:
+    password: "rest-password"
+    username: "rest-user"
+
+    endpoints[0]:
+      endpoint-name: "jobs"
+      endpoint-address: "https://target/jobs/?filter_string=COMPLETED_OKAY"
+      id-property: "id"
+      pagination: true
+      page-size-param-name: "page_size"
+      page-size-value: 20
+      page-param-name: "page"
+      page-start-value: 1
+      next-child-endpoint-name: "job"
+      next-node-reference: "jobs[*].job_id"
+      custom-key:
+        name: "otherKeyName"
+        reg-ex: "HA[0-9]{1,8}-[0-9]{2,2}"
+        path: "otherId"
