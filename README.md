@@ -1,3 +1,7 @@
+# General
+This application works like data crawler with strict configuration.
+Consum JSON data from REST endpoints and produce them into Apache Kafka topics. Data may contain references to other enpoint data, which should be aquired as defined in configuration.
+
 # Concept
 ## Dynamic configuration for source data
 * build a m-array-tree of REST endpoint targets with a *FIRST CHILD/NEXT SIBLING REPRESENTATION*
