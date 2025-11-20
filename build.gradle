@@ -26,7 +26,7 @@ dependencies {
 	implementation 'org.springframework.kafka:spring-kafka'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.json:json:20240303'
-	implementation 'com.jayway.jsonpath:json-path:2.9.0'
+	implementation 'com.jayway.jsonpath:json-path:2.10.0'
 	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
 	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
