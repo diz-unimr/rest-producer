@@ -61,7 +61,7 @@ jobs:
             type=semver,pattern={{version}}
             # set latest tag for default branch
             type=raw,value=latest,enable={{is_default_branch}}
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           java-version: "21"
           distribution: "temurin"
